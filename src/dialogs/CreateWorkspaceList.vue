@@ -9,8 +9,9 @@
             ref="name"
             v-model="name"
             :rules="rules.name"
-            validate-on-blur
             label="Name"
+            validate-on-blur
+            autofocus
         />
     </DialogForm>
 </template>
@@ -58,18 +59,20 @@ export default Vue.extend({
         },
     },
     mounted() {
-        (this.$refs.name as HTMLInputElement).focus();
+        // Autofocus does not seem to work as expected inside dialogs
+        // see: https://github.com/vuetifyjs/vuetify/search?q=autofocus+dialog&type=Issues
+        this.$nextTick((this.$refs.name as any).focus);
     },
     methods: {
         async createWorkspaceList() {
-            const list = await this.$ui.wrapAsyncOperation(
+            this.$ui.completeDialog(this.dialog.id);
+            this.$ui.wrapAsyncOperation(
                 this.$workspaces.createList(
                     this.$workspaces.active as Workspace,
                     this.name
-                )
+                ),
+                `Creating ${this.name} list...`
             );
-
-            this.$ui.completeDialog(this.dialog.id, list);
         },
     },
 });

@@ -1,5 +1,6 @@
 <template>
     <DialogForm
+        v-slot="{ submit }"
         :dialog="dialog"
         title="Create Workspace"
         submit-label="Create"
@@ -16,8 +17,10 @@
             ref="name"
             v-model="name"
             :rules="rules.name"
-            validate-on-blur
             label="Name"
+            validate-on-blur
+            autofocus
+            @keydown.enter="submit"
         />
     </DialogForm>
 </template>
@@ -80,7 +83,9 @@ export default Vue.extend({
         }
     },
     mounted() {
-        (this.$refs.name as HTMLInputElement).focus();
+        // Autofocus does not seem to work as expected inside dialogs
+        // see: https://github.com/vuetifyjs/vuetify/search?q=autofocus+dialog&type=Issues
+        this.$nextTick((this.$refs.name as any).focus);
     },
     methods: {
         async createWorkspace() {
@@ -94,11 +99,11 @@ export default Vue.extend({
                     break;
             }
 
-            const workspace = await this.$ui.wrapAsyncOperation(
-                this.$workspaces.createWorkspace(...args)
+            this.$ui.completeDialog(this.dialog.id);
+            this.$ui.wrapAsyncOperation(
+                this.$workspaces.createWorkspace(...args),
+                `Creating ${this.name} workspace...`
             );
-
-            this.$ui.completeDialog(this.dialog.id, workspace);
         },
     },
 });

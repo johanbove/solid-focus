@@ -6,15 +6,18 @@
                 <v-btn color="primary" @click="create">Add</v-btn>
             </div>
         </v-form>
-        <v-list>
+        <VerticalSlide tag="v-list" class="p-0">
             <template v-for="(task, index) of pendingTasks">
                 <TaskItem :key="task.id" :task="task" />
-                <v-divider v-if="index !== pendingTasks.length - 1" :key="`divider-${index}`" />
+                <v-divider
+                    v-if="index !== pendingTasks.length - 1"
+                    :key="`divider-${task.id}`"
+                />
             </template>
-            <v-list-tile v-if="pendingTasks.length === 0" class="text-grey-darker">
-                No pending tasks
-            </v-list-tile>
-        </v-list>
+        </VerticalSlide>
+        <div v-if="pendingTasks.length === 0" class="text-grey-darker text-center">
+            Congratulations, you don't have any pending tasks!
+        </div>
         <template v-if="completedTasks.length > 0">
             <v-btn
                 :flat="true"
@@ -25,12 +28,17 @@
             >
                 {{ showCompleted ? 'Hide completed' : 'Show completed' }}
             </v-btn>
-            <v-list v-if="showCompleted">
-                <template v-for="(task, index) of completedTasks">
-                    <TaskItem :key="task.id" :task="task" />
-                    <v-divider v-if="index !== completedTasks.length - 1" :key="`divider-${index}`" />
-                </template>
-            </v-list>
+            <v-slide-y-transition>
+                <VerticalSlide v-if="showCompleted" tag="v-list" class="p-0">
+                    <template v-for="(task, index) of completedTasks">
+                        <TaskItem :key="task.id" :task="task" />
+                        <v-divider
+                            v-if="index !== completedTasks.length - 1"
+                            :key="`divider-${task.id}`"
+                        />
+                    </template>
+                </VerticalSlide>
+            </v-slide-y-transition>
         </template>
     </div>
 </template>
@@ -42,6 +50,7 @@ import Task from '@/models/Task';
 import List from '@/models/List';
 
 import TaskItem from '@/components/TaskItem.vue';
+import VerticalSlide from '@/components/transitions/VerticalSlide.vue';
 
 interface Data {
     newTask: string;
@@ -51,6 +60,7 @@ interface Data {
 export default Vue.extend({
     components: {
         TaskItem,
+        VerticalSlide,
     },
     props: {
         list: {
@@ -75,11 +85,16 @@ export default Vue.extend({
     methods: {
         async create() {
             if (this.newTask) {
-                await this.$ui.wrapAsyncOperation(
-                    this.$workspaces.createTask(this.list, this.newTask),
-                    'Creating task...',
-                );
+                const newTask = this.newTask;
                 this.newTask = '';
+
+                try {
+                    await this.$workspaces.createTask(this.list, newTask);
+                } catch (e) {
+                    this.$ui.showError(e);
+
+                    // TODO delete task from local store
+                }
             }
         },
     },

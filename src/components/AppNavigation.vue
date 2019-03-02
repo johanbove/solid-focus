@@ -53,7 +53,7 @@
                             </span>
                         </div>
                         <div class="text-white flex-grow flex flex-col">
-                            <span class="text-lg tablet:text-xl desktop:text-xl">
+                            <span :title="userInfo" class="text-lg tablet:text-xl desktop:text-xl">
                                 {{ $auth.user.name }}
                             </span>
                             <v-menu v-if="!$workspaces.empty" bottom>
@@ -68,8 +68,7 @@
                                 </div>
                                 <v-list>
                                     <v-list-tile
-                                        v-for="(workspace, i) in $workspaces.all"
-                                        v-if="workspace !== $workspaces.active"
+                                        v-for="(workspace, i) in inactiveWorkspaces"
                                         :key="i"
                                         @click="activateWorkspace(workspace)"
                                     >
@@ -175,6 +174,7 @@
 import Vue from 'vue';
 
 import List from '@/models/List';
+import SolidUser from '@/models/users/SolidUser';
 import Workspace from '@/models/Workspace';
 
 import { Layout } from '@/services/UI';
@@ -200,6 +200,17 @@ export default Vue.extend({
         centerAvatar(): boolean {
             return this.collapsed && !this.$ui.mobile;
         },
+        inactiveWorkspaces(): Workspace[] {
+            return this.$workspaces.all
+                .filter((workspace: Workspace) => workspace !== this.$workspaces.active);
+        },
+        userInfo(): string | void {
+            // TODO this should be moved to a dedicated section with more information
+            // about the user.
+            if (this.$auth.user instanceof SolidUser) {
+                return 'WebID: ' + this.$auth.user.id;
+            }
+        },
     },
     created() {
         this.collapsed = this.$ui.mobile;
@@ -209,28 +220,31 @@ export default Vue.extend({
             this.collapsed = !visible;
         },
         createWorkspace() {
-            this.$ui.openDialog(
-                () => import('@/dialogs/CreateWorkspace.vue')
-            );
+            this.$ui.openDialog(() => import('@/dialogs/CreateWorkspace.vue'));
         },
         createWorkspaceList() {
-            this.$ui.openDialog(
-                () => import('@/dialogs/CreateWorkspaceList.vue')
-            )
-                .then(list => (this.$workspaces.active as Workspace).setActiveList(list));
+            this.$ui.openDialog(() => import('@/dialogs/CreateWorkspaceList.vue'));
         },
         activateWorkspace(workspace: Workspace) {
-            this.$ui.wrapAsyncOperation(
-                this.$workspaces.setActiveWorkspace(workspace),
-                `Loading ${workspace.name}...`
-            );
+            if (!workspace.loaded) {
+                this.$ui.wrapAsyncOperation(
+                    this.$workspaces.setActiveWorkspace(workspace),
+                    `Loading ${workspace.name} workspace...`
+                );
+            } else {
+                this.$workspaces.setActiveWorkspace(workspace);
+            }
         },
         activateList(list: List) {
             if (this.$workspaces.hasActive()) {
-                this.$ui.wrapAsyncOperation(
-                    this.$workspaces.setActiveList(list),
-                    `Loading ${list.name}...`
-                );
+                if (!list.loaded) {
+                    this.$ui.wrapAsyncOperation(
+                        this.$workspaces.setActiveList(list),
+                        `Loading ${list.name} list...`
+                    );
+                } else {
+                    this.$workspaces.setActiveList(list);
+                }
             }
 
             if (this.$ui.mobile) {
